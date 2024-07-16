@@ -1,3 +1,5 @@
+% need to update for windows too
+
 % Get the full path of the folder containing this script
 script_folder = fileparts(mfilename('fullpath'));
 
