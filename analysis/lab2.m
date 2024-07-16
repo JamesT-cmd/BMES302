@@ -1,5 +1,5 @@
 % Get the full path of the folder containing this script
-%script_folder = fileparts(mfilename('fullpath'));
+script_folder = fileparts(mfilename('fullpath'));
 
 % Define the path to the data folder relative to the script folder
 data_folder = fullfile(script_folder, '../lab_2_data/');
