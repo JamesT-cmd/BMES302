@@ -125,15 +125,30 @@ for k = 1:length(txtFiles)
     
 end
 
-% Plot average peak height against standard deviation of peak heights
-figure('Name', 'Average Peak Height vs Std Dev of Peak Heights', 'NumberTitle', 'off');
-scatter(averagePeakHeights, stdPeakHeights);
-xlabel('Average Peak Height');
-ylabel('Standard Deviation of Peak Heights');
-title('Average Peak Height vs Standard Deviation of Peak Heights');
+% Normalize the data
+normalizedAvgPeakHeights = (averagePeakHeights - min(averagePeakHeights)) / (max(averagePeakHeights) - min(averagePeakHeights));
+normalizedStdPeakHeights = (stdPeakHeights - min(stdPeakHeights)) / (max(stdPeakHeights) - min(stdPeakHeights));
 
-% Label the points with the frequency (Hz) of the data point
+% Flip the normalized x-axis values for Euclidean distance calculation
+flippedNormalizedAvgPeakHeights = 1 - normalizedAvgPeakHeights;
+
+% Calculate the Euclidean distance from the origin (0,0) for each point with the flipped x-axis
+euclideanDistances = sqrt(flippedNormalizedAvgPeakHeights.^2 + normalizedStdPeakHeights.^2);
+
+% Plot normalized average peak height against normalized standard deviation of peak heights
+figure('Name', 'Normalized Average Peak Height vs Normalized Std Dev of Peak Heights', 'NumberTitle', 'off');
+scatter(normalizedAvgPeakHeights, normalizedStdPeakHeights);
+xlabel('Normalized Average Peak Height');
+ylabel('Normalized Standard Deviation of Peak Heights');
+title('Normalized Average Peak Height vs Normalized Standard Deviation of Peak Heights');
+set(gca, 'XDir', 'reverse'); % Flip the x-axis
+
+% Label the points with the frequency (Hz) and Euclidean distance
 for i = 1:length(frequencies)
-    text(averagePeakHeights(i), stdPeakHeights(i), sprintf('%d Hz', frequencies(i)), ...
+    text(normalizedAvgPeakHeights(i), normalizedStdPeakHeights(i), ...
+        sprintf('%d Hz\nDist: %.2f', frequencies(i), euclideanDistances(i)), ...
         'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
 end
+
+
+
