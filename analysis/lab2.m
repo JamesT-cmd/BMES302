@@ -12,10 +12,14 @@ txtFiles = dir(filePattern);
 useWholeDataset = input('Do you want to use the whole dataset instead of segmenting it? (y/n): ', 's');
 useWholeDataset = strcmpi(useWholeDataset, 'y');
 
-% Initialize arrays to store average peak height and standard deviation
+% Initialize arrays to store results
 averagePeakHeights = [];
 stdPeakHeights = [];
 frequencies = [];
+bpms = [];
+stdPeakIntervals = [];
+totalPeaks = [];
+names = {};
 
 % Loop through each file
 for k = 1:length(txtFiles)
@@ -31,6 +35,16 @@ for k = 1:length(txtFiles)
         % If frequency cannot be determined, skip this file
         fprintf('Skipping file %s because frequency is not found in the filename.\n', baseFileName);
         continue;
+    end
+
+    % Extract name from the filename
+    name = regexp(baseFileName, 'data(\w+)\d+hz', 'tokens', 'once');
+    if ~isempty(name)
+        name = name{1};
+        names{end+1} = name;
+    else
+        name = 'Unknown';
+        names{end+1} = name;
     end
 
     % Define the filter parameters
@@ -100,9 +114,12 @@ for k = 1:length(txtFiles)
     avgPeakHeight = mean(pks);
     stdPeakHeight = std(pks);
     
-    % Store average peak height and standard deviation
+    % Store results
     averagePeakHeights = [averagePeakHeights; avgPeakHeight];
     stdPeakHeights = [stdPeakHeights; stdPeakHeight];
+    bpms = [bpms; bpm];
+    stdPeakIntervals = [stdPeakIntervals; stdPeakInterval];
+    totalPeaks = [totalPeaks; length(pks)];
     
     % Highlight the peaks on the plot
     hold on;
@@ -122,7 +139,6 @@ for k = 1:length(txtFiles)
     disp(['Average Peak Height: ' num2str(avgPeakHeight)]);
     disp(['Standard Deviation of Peak Heights: ' num2str(stdPeakHeight)]);
     disp(['Total Number of Peaks: ' num2str(length(pks))]);
-    
 end
 
 % Normalize the data
@@ -150,5 +166,14 @@ for i = 1:length(frequencies)
         'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right');
 end
 
+% Create a table with the results
+names(:) = {'ANDREW2'}; % Set all names to 'ANDREW2'
+resultsTable2 = table(names', frequencies, bpms, stdPeakIntervals, averagePeakHeights, stdPeakHeights, totalPeaks, ...
+    'VariableNames', {'Name', 'Frequency', 'BPM', 'StdPeakInterval', 'AveragePeakHeight', 'StdPeakHeight', 'TotalPeaks'});
 
+% Display summary of results
+disp('Summary of Results:');
+disp(resultsTable2);
 
+% Save the table to the workspace
+assignin('base', 'resultsTable2', resultsTable2);

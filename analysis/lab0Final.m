@@ -1,18 +1,16 @@
 % Get the full path of the folder containing this script
 script_folder = fileparts(mfilename('fullpath'));
 
-% Define the path to the data folder relative to the script folder
-data_folder = fullfile(script_folder, '..', 'lab_1_data');
+% Define the path to the data folder two levels deep relative to the script folder
+data_folder = fullfile(script_folder, '..', 'lab_0_data', 'converted_csvs');
 
-% Get a list of all text files in the data folder
-data_files = dir(fullfile(data_folder, '*.txt'));
+% Get a list of all text files in the folder
+filePattern = fullfile(data_folder, '*.txt');
+txtFiles = dir(filePattern);
 
 % Option to use the whole dataset instead of segmenting
 useWholeDataset = input('Do you want to use the whole dataset instead of segmenting it? (y/n): ', 's');
 useWholeDataset = strcmpi(useWholeDataset, 'y');
-
-% Define the sampling rate (samples per second)
-sampling_rate = 1000; % Adjust this value based on your specific needs
 
 % Initialize arrays to store results
 averageHeartRates = [];
@@ -22,48 +20,61 @@ stdPeakHeights = [];
 stdHeartRates = [];
 names = {};
 
-% Define the filter parameters
-[b, a] = butter(4, 6/(sampling_rate/2), 'high');
-
-% Loop through each file and process it
-for k = 1:length(data_files)
-    baseFileName = data_files(k).name;
+% Loop through each file
+for k = 1:length(txtFiles)
+    baseFileName = txtFiles(k).name;
     fullFileName = fullfile(data_folder, baseFileName);
 
-    % Extract name from the filename
-    name = regexp(baseFileName, 'Lab1(\w+)', 'tokens', 'once');
-    if ~isempty(name)
-        name = name{1};
+    % Extract name and frequency from the filename (e.g., 'dataANDREW1000hzwristwristankle.txt')
+    [tokens, ~] = regexp(baseFileName, 'data(\D+)(\d+)\D+\.txt', 'tokens', 'match');
+    if ~isempty(tokens)
+        name = tokens{1}{1};
+        frequency = str2double(tokens{1}{2});
+        
+        % Check the 6th letter from the right (excluding '.txt')
+        suffix_position = length(baseFileName) - 9; % -4 for '.txt' and -4 to get to the 6th from the right
+        if baseFileName(suffix_position) == 't'
+            name = [name '1'];
+        else
+            name = [name '2'];
+        end
+        
         names{end+1} = name;
     else
-        name = 'Unknown';
-        names{end+1} = name;
+        % If frequency or name cannot be determined, skip this file
+        fprintf('Skipping file %s because frequency or name is not found in the filename.\n', baseFileName);
+        continue;
     end
 
-    % Read the data from the text file
-    data = readmatrix(fullFileName);
-    
-    % Check if the file is inverted and flip the data if necessary
-    if contains(baseFileName, 'Inverted')
-        data = -data;
+    % Read the ECG data from the text file, skipping the header lines
+    fileID = fopen(fullFileName, 'r');
+    data = textscan(fileID, '%f', 'HeaderLines', 7, 'Delimiter', ',');
+    fclose(fileID);
+    data = data{1};
+
+    % Check if data is empty
+    if isempty(data)
+        fprintf('Skipping file %s because the data is empty.\n', baseFileName);
+        continue;
     end
+
+    % Define the filter parameters
+    [b, a] = butter(4, 6/(frequency/2), 'high');
+    data = filter(b, a, data);
     
-    % Create a time vector based on the sampling rate
-    t = (0:length(data)-1)' / sampling_rate;
-    
-    % Apply the high-pass filter to the data
-    filtered_data = filter(b, a, data);
+    % Create a time vector based on the frequency
+    t = (0:length(data)-1) / frequency;
     
     % If using the whole dataset, no need to segment
     if useWholeDataset
-        segmentedData = filtered_data;
+        segmentedData = data;
         segmentedTime = t;
     else
         % Plot the ECG data
         fig1 = figure('Name', 'Full ECG Data', 'NumberTitle', 'off');
-        set(fig1, 'Position', [100, 500, 600, 400]);
-        plot(t, filtered_data);
-        title(sprintf('%s ECG Data', name));
+        set(fig1, 'Position', [100, 500, 600, 400]); % Position for the first figure
+        plot(t, data);
+        title(sprintf('%s ECG Data at %d Hz', name, frequency));
         xlabel('Time (s)');
         ylabel('ECG Signal');
         
@@ -81,20 +92,20 @@ for k = 1:length(data_files)
         idx2 = find(t <= x2, 1, 'last');
         
         % Segment the data
-        segmentedData = filtered_data(idx1:idx2);
+        segmentedData = data(idx1:idx2);
         segmentedTime = t(idx1:idx2);
     end
-    
+
     % Create figure for the segmented ECG data
     fig2 = figure('Name', 'Segmented ECG Data', 'NumberTitle', 'off');
-    set(fig2, 'Position', [750, 500, 600, 400]);
+    set(fig2, 'Position', [750, 500, 600, 400]); % Position for the second figure
     plot(segmentedTime, segmentedData);
-    title(sprintf('%s ECG Data', name));
+    title(sprintf('%s ECG Data at %d Hz', name, frequency));
     xlabel('Time (s)');
     ylabel('ECG Signal');
     
     % Find peaks in the segmented data
-    [pks, locs] = findpeaks(segmentedData, 'MinPeakHeight', mean(segmentedData) + std(segmentedData), 'MinPeakDistance', sampling_rate/2);
+    [pks, locs] = findpeaks(segmentedData, 'MinPeakHeight', mean(segmentedData) + std(segmentedData), 'MinPeakDistance', frequency/2);
     
     % Check if peaks were found
     if isempty(pks)
@@ -131,7 +142,7 @@ for k = 1:length(data_files)
         bpm, stdBpm, avgPeakMagnitude, stdPeakHeight, length(pks)), ...
         'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 12, 'BackgroundColor', 'w');
     
-    title(sprintf('%s ECG Data with Peaks Highlighted', name));
+    title(sprintf('%s ECG Data at %d Hz with Peaks Highlighted', name, frequency));
     
     % Display results in the command window
     disp(['Name: ' name]);
@@ -141,43 +152,12 @@ for k = 1:length(data_files)
 end
 
 % Create a table with the results
-resultsTable = table(names', averageHeartRates, stdHeartRates, averagePeakMagnitudes, stdPeakHeights, totalPeaks, ...
+resultsTable0 = table(names', averageHeartRates, stdHeartRates, averagePeakMagnitudes, stdPeakHeights, totalPeaks, ...
     'VariableNames', {'Name', 'AverageHeartRate', 'StdHeartRate', 'AveragePeakMagnitude', 'StdPeakHeight', 'TotalPeaks'});
 
 % Display summary of results
 disp('Summary of Results:');
-disp(resultsTable);
+disp(resultsTable0);
 
 % Save the table to the workspace
-assignin('base', 'resultsTable', resultsTable);
-
-% Extract data for the inverted and normal datasets
-invertedData = resultsTable(contains(resultsTable.Name, 'Inverted'), :);
-normalData = resultsTable(contains(resultsTable.Name, 'Normal'), :);
-
-% Perform t-tests between inverted and normal datasets
-n1 = invertedData.TotalPeaks;
-n2 = normalData.TotalPeaks;
-
-% Calculate pooled standard deviation for heart rate
-sp_heart_rate = sqrt(((n1 - 1) .* invertedData.StdHeartRate.^2 + (n2 - 1) .* normalData.StdHeartRate.^2) / (n1 + n2 - 2));
-t_heart_rate = (invertedData.AverageHeartRate - normalData.AverageHeartRate) ./ (sp_heart_rate .* sqrt(1/n1 + 1/n2));
-df_heart_rate = n1 + n2 - 2;
-p_heart_rate = 2 * tcdf(-abs(t_heart_rate), df_heart_rate);
-h_heart_rate = p_heart_rate < 0.05;
-
-% Calculate pooled standard deviation for peak size
-sp_peak_size = sqrt(((n1 - 1) .* invertedData.StdPeakHeight.^2 + (n2 - 1) .* normalData.StdPeakHeight.^2) / (n1 + n2 - 2));
-t_peak_size = (invertedData.AveragePeakMagnitude - normalData.AveragePeakMagnitude) ./ (sp_peak_size .* sqrt(1/n1 + 1/n2));
-df_peak_size = n1 + n2 - 2;
-p_peak_size = 2 * tcdf(-abs(t_peak_size), df_peak_size);
-h_peak_size = p_peak_size < 0.05;
-
-% Display t-test results
-disp('T-test Results between Inverted and Normal datasets:');
-fprintf('Heart Rate: h = %d, p = %.4f\n', h_heart_rate, p_heart_rate);
-fprintf('Peak Size: h = %d, p = %.4f\n', h_peak_size, p_peak_size);
-
-% Save the t-test results to the workspace
-assignin('base', 'tTestResults_HeartRate', table(h_heart_rate, p_heart_rate, 'VariableNames', {'h', 'p'}));
-assignin('base', 'tTestResults_PeakSize', table(h_peak_size, p_peak_size, 'VariableNames', {'h', 'p'}));
+assignin('base', 'resultsTable0', resultsTable0);
