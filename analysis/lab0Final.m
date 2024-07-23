@@ -161,3 +161,37 @@ disp(resultsTable0);
 
 % Save the table to the workspace
 assignin('base', 'resultsTable0', resultsTable0);
+
+% Unique names (excluding numbers)
+uniqueNames = unique(cellfun(@(x) x(1:end-1), resultsTable0.Name, 'UniformOutput', false));
+
+for n = 1:length(uniqueNames)
+    name1 = [uniqueNames{n}, '1'];
+    name2 = [uniqueNames{n}, '2'];
+    
+    % Extract data for each name
+    data1 = resultsTable0(strcmp(resultsTable0.Name, name1), :);
+    data2 = resultsTable0(strcmp(resultsTable0.Name, name2), :);
+    
+    % Check if data is available for both names
+    if ~isempty(data1) && ~isempty(data2)
+        % Calculate t-test for AverageHeartRate
+        pooledStdHeartRate = sqrt(((data1.StdHeartRate.^2 .* (data1.TotalPeaks - 1)) + (data2.StdHeartRate.^2 .* (data2.TotalPeaks - 1))) / (data1.TotalPeaks + data2.TotalPeaks - 2));
+        t_heartRate = (data1.AverageHeartRate - data2.AverageHeartRate) ./ (pooledStdHeartRate .* sqrt(1./data1.TotalPeaks + 1./data2.TotalPeaks));
+        df_heartRate = data1.TotalPeaks + data2.TotalPeaks - 2;
+        p_heartRate = 2 * tcdf(-abs(t_heartRate), df_heartRate);
+        
+        % Calculate t-test for AveragePeakMagnitude
+        pooledStdPeakMagnitude = sqrt(((data1.StdPeakHeight.^2 .* (data1.TotalPeaks - 1)) + (data2.StdPeakHeight.^2 .* (data2.TotalPeaks - 1))) / (data1.TotalPeaks + data2.TotalPeaks - 2));
+        t_peak = (data1.AveragePeakMagnitude - data2.AveragePeakMagnitude) ./ (pooledStdPeakMagnitude .* sqrt(1./data1.TotalPeaks + 1./data2.TotalPeaks));
+        df_peak = data1.TotalPeaks + data2.TotalPeaks - 2;
+        p_peak = 2 * tcdf(-abs(t_peak), df_peak);
+        
+        % Display results
+        fprintf('Comparison between %s and %s:\n', name1, name2);
+        fprintf('Average Heart Rate: p-value = %.4e\n', p_heartRate);
+        fprintf('Average Peak Magnitude: p-value = %.4e\n\n', p_peak);
+    else
+        fprintf('Data not available for comparison between %s and %s\n', name1, name2);
+    end
+end
