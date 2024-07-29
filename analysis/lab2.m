@@ -243,6 +243,10 @@ end
 comparisonTable = table(frequencies1, frequencies2, pValuesBPM, hValuesBPM, pValuesPeakHeight, hValuesPeakHeight, ...
     'VariableNames', {'Frequency1', 'Frequency2', 'PValueBPM', 'HBPM', 'PValuePeakHeight', 'HPeakHeight'});
 
+% Display summary table
+disp('Summary of P-values and H-values for each comparison:');
+disp(comparisonTable);
+
 % Extract and sort data for the scatter plot
 [sortedFrequencies, sortIdx] = sort(resultsTable2.Frequency, 'descend');
 sortedAveragePeakHeights = resultsTable2.AveragePeakHeight(sortIdx);
