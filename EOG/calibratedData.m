@@ -1,35 +1,37 @@
-% Define the relative path to the data folder
-data_folder = ['..', filesep, 'lab_3_data'];
+% Define the relative path to the data folders
+data_folder = fullfile('..', 'lab_3_data');
 
-% Get a list of all .txt files in the folder
-files = dir(fullfile(data_folder, '*.txt'));
+% Define the directory paths for the calibration sets
+calibration1_dir = fullfile(data_folder, 'calibration1');
+calibration2_dir = fullfile(data_folder, 'calibration2');
+
+% Get a list of all .txt files in each calibration folder
+calibration1_files = dir(fullfile(calibration1_dir, '*.txt'));
+calibration2_files = dir(fullfile(calibration2_dir, '*.txt'));
 
 % Sampling rate
 sampling_rate = 200;
 
-% Loop through each file
-for k = 1:length(files)
+% Loop through each file in the calibration1 directory
+for k = 1:length(calibration1_files)
     % Construct the full file path
-    file_path = fullfile(files(k).folder, files(k).name);
+    file_path = fullfile(calibration1_files(k).folder, calibration1_files(k).name);
     
     % Load the data from the file
     data = load(file_path);
     
-    % Calculate the time vector
-    time = (0:length(data)-1) / sampling_rate;
+    % Process and plot the data
+    process_data(data, sampling_rate, 1, calibration1_files(k).name);
+end
+
+% Loop through each file in the calibration2 directory
+for k = 1:length(calibration2_files)
+    % Construct the full file path
+    file_path = fullfile(calibration2_files(k).folder, calibration2_files(k).name);
     
-    % Compute phi(t) using the function
-    phi_t = phi_t_function(data);
+    % Load the data from the file
+    data = load(file_path);
     
-    % Plot phi(t) over time
-    figure;
-    plot(time, phi_t, 'm', 'DisplayName', '\phi(t)');
-    hold on;
-    yline(45, 'r--', 'DisplayName', '45 Degrees');
-    yline(-45, 'r--', 'DisplayName', '-45 Degrees');
-    xlabel('Time (s)');
-    ylabel('\phi(t)');
-    legend show;
-    title(['\phi(t) Calculation for ', files(k).name]);
-    grid on;
+    % Process and plot the data
+    process_data(data, sampling_rate, 2, calibration2_files(k).name);
 end

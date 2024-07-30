@@ -1,5 +1,5 @@
 % Construct the relative path to the data file
-relative_path = ['..', filesep, 'lab_3_data', filesep, 'calibrationSetLeftFirst.txt'];
+relative_path = ['..', filesep, 'lab_3_data', filesep, 'baseline2.txt'];
 
 % Load the data from the relative path
 data = load(relative_path);
@@ -82,7 +82,7 @@ V1 = mean(data(closest_positive_peaks));
 V2 = mean(data(closest_negative_peaks));
 
 % Compute phi(t) using the function
-phi_t = phi_t_function(data);
+phi_t = phi_t_function(data, V1, V2);
 
 % Plot the results with the selected positive and negative points
 figure;
