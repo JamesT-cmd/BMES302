@@ -1,4 +1,4 @@
-function process_data(data, sampling_rate, calibration, file_name)
+function calibrated_data = process_data(data, sampling_rate, calibration, file_name)
     % Calculate the time vector
     time = (0:length(data)-1) / sampling_rate;
     
@@ -16,4 +16,7 @@ function process_data(data, sampling_rate, calibration, file_name)
     legend show;
     title(['\phi(t) Calculation for ', file_name]);
     grid on;
+    
+    % Return the calibrated data
+    calibrated_data = phi_t;
 end
